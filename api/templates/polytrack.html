@@ -201,9 +201,67 @@
     }
 
     /* Tag for track groups */
-    .tag-s { color: #7dd3fc; }
-    .tag-w { color: #86efac; }
-    .tag-d { color: #fca5a5; }
+    .btn-help {
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: underline;
+    }
+    .btn-help:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow: auto;
+      position: relative;
+    }
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .modal-body {
+      padding: 20px;
+    }
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
   </style>
 </head>
 <body>
@@ -314,8 +372,11 @@
       <p class="text-xs text-gray-500">Students need to submit their Polytrack token hash. Find it in your Polytrack profile settings.</p>
     </div>
     <form method="POST" action="/polytrack/register" class="flex flex-col sm:flex-row gap-3">
-      <input class="reg-input" type="text" name="nickname" placeholder="Display name" required maxlength="32" />
-      <input class="reg-input mono text-xs" type="text" name="token_hash" placeholder="Token hash (64 chars)" required minlength="60" />
+      <input class="reg-input" type="text" name="nickname" placeholder="Name" required maxlength="32" />
+      <div class="flex gap-2 flex-1">
+        <input class="reg-input mono text-xs flex-1" type="text" name="token_hash" placeholder="Token hash (64 chars)" required minlength="60" />
+        <button type="button" class="btn-help whitespace-nowrap" onclick="showModal()">Not sure how to find this?</button>
+      </div>
       <button class="btn-accent whitespace-nowrap" type="submit">Add player</button>
     </form>
   </div>
@@ -325,5 +386,37 @@
   </p>
 
 </div>
+
+<!-- Modal -->
+<div id="helpModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">How to find your token hash</h2>
+      <button class="modal-close" onclick="hideModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <video controls width="100%">
+        <source src="/assets/token-hash-tutorial.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showModal() {
+    document.getElementById('helpModal').classList.add('show');
+  }
+  function hideModal() {
+    document.getElementById('helpModal').classList.remove('show');
+  }
+  // Close modal when clicking outside
+  document.getElementById('helpModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      hideModal();
+    }
+  });
+</script>
+
 </body>
 </html>
