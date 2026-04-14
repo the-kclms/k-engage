@@ -1,0 +1,5 @@
+flask
+requests
+sqlite3
+concurrent.futures
+os
