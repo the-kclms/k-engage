@@ -18,6 +18,14 @@
       --text: #f0f0f0;
       --muted: #666;
     }
+    html.light-mode {
+      --bg: #ffffff;
+      --surface: #f8f8f8;
+      --surface2: #e8e8e8;
+      --border: #d0d0d0;
+      --text: #1a1a1a;
+      --muted: #888;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: var(--bg);
@@ -262,6 +270,22 @@
       line-height: 1;
     }
     .modal-close:hover { color: var(--text); }
+
+    /* Mobile optimizations */
+    @media (max-width: 640px) {
+      body { font-size: 16px; }
+      .header-bar { padding: 1.5rem 1rem; }
+      .track-pill { font-size: 14px; padding: 8px 16px; }
+      .reg-input { padding: 12px 16px; font-size: 16px; }
+      .btn-accent, .btn-help { padding: 12px 20px; font-size: 14px; }
+      .lb-row { padding: 16px 16px; }
+      .rank-badge { font-size: 14px; }
+      .player-name { font-size: 16px; }
+      .time-cell { font-size: 15px; }
+      .lb-row.overall-cols { grid-template-columns: 40px 1fr 60px 120px; }
+      .lb-row.track-cols { grid-template-columns: 40px 1fr 120px; }
+      .group-label { font-size: 12px; }
+    }
   </style>
 </head>
 <body>
@@ -272,7 +296,10 @@
     <span class="text-xl font-extrabold tracking-tight">POLY<span class="accent-text">TRACK</span></span>
     <span class="text-xs text-gray-600 mono tracking-widest uppercase mt-0.5">school lb</span>
   </div>
-  <span class="mono text-xs text-gray-600">{{ player_count }} player{{ 's' if player_count != 1 else '' }} registered</span>
+  <div class="flex items-center gap-4">
+    <button id="theme-toggle" class="text-lg" title="Toggle theme">🌙</button>
+    <span class="mono text-xs text-gray-600">{{ player_count }} player{{ 's' if player_count != 1 else '' }} registered</span>
+  </div>
 </div>
 
 <div class="max-w-4xl mx-auto px-4 py-8 space-y-8">
@@ -413,6 +440,24 @@
     if (e.target === this) {
       hideModal();
     }
+  });
+
+  // Theme toggle
+  const themeToggle = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+
+  // Load saved theme
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') {
+    html.classList.add('light-mode');
+    themeToggle.textContent = '☀️';
+  }
+
+  themeToggle.addEventListener('click', () => {
+    html.classList.toggle('light-mode');
+    const isLight = html.classList.contains('light-mode');
+    themeToggle.textContent = isLight ? '☀️' : '🌙';
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
   });
 </script>
 
