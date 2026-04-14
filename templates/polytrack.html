@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Polytrack — School Leaderboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #e8ff47;
+      --accent-dim: #c9dc2a;
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #f0f0f0;
+      --muted: #666;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+    }
+    .mono { font-family: 'Space Mono', monospace; }
+
+    /* Scanline texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .header-bar {
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .accent-text { color: var(--accent); }
+
+    /* Track pills */
+    .track-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      display: inline-block;
+      letter-spacing: 0.05em;
+    }
+    .track-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .track-pill.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+    .track-pill.overall {
+      background: transparent;
+      border-color: var(--muted);
+      color: var(--muted);
+    }
+    .track-pill.overall.active {
+      background: var(--text);
+      border-color: var(--text);
+      color: #000;
+    }
+
+    /* Group labels */
+    .group-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* Leaderboard table */
+    .lb-row {
+      display: grid;
+      align-items: center;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .lb-row:hover { background: var(--surface2); }
+    .lb-row.header {
+      padding: 8px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* Overall mode columns: rank | name | completed | total */
+    .lb-row.overall-cols {
+      grid-template-columns: 48px 1fr 80px 140px;
+    }
+    /* Track mode columns: rank | name | time */
+    .lb-row.track-cols {
+      grid-template-columns: 48px 1fr 140px;
+    }
+
+    .rank-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .rank-badge.gold { color: #FFD700; }
+    .rank-badge.silver { color: #C0C0C0; }
+    .rank-badge.bronze { color: #CD7F32; }
+
+    .time-cell {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      color: var(--accent);
+      text-align: right;
+    }
+    .time-cell.gold { color: #FFD700; }
+
+    .player-name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .completed-cell {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Register panel */
+    .register-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .reg-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      padding: 9px 14px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .reg-input:focus { border-color: var(--accent); }
+    .reg-input::placeholder { color: var(--muted); }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .btn-accent:hover { background: var(--accent-dim); }
+
+    .loading-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* Animated row entrance */
+    .lb-row.data-row {
+      animation: slideIn 0.2s ease both;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .empty-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* Tag for track groups */
+    .tag-s { color: #7dd3fc; }
+    .tag-w { color: #86efac; }
+    .tag-d { color: #fca5a5; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header-bar px-6 py-4 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <span class="text-xl font-extrabold tracking-tight">POLY<span class="accent-text">TRACK</span></span>
+    <span class="text-xs text-gray-600 mono tracking-widest uppercase mt-0.5">school lb</span>
+  </div>
+  <span class="mono text-xs text-gray-600">{{ player_count }} player{{ 's' if player_count != 1 else '' }} registered</span>
+</div>
+
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+
+  <!-- Track selector -->
+  <div class="space-y-4">
+    <div class="flex flex-wrap gap-1.5 items-center">
+      <a href="/polytrack" class="track-pill overall {{ 'active' if mode == 'overall' else '' }}">OVERALL</a>
+      <span class="text-gray-700 mx-1">|</span>
+      <!-- Spring -->
+      <span class="group-label mr-1 tag-s">S</span>
+      {% for t in tracks if t.startswith('S') %}
+        <a href="/polytrack?track={{ t }}" class="track-pill {{ 'active' if active_track == t else '' }}">{{ t }}</a>
+      {% endfor %}
+      <span class="text-gray-700 mx-1">|</span>
+      <!-- Winter -->
+      <span class="group-label mr-1 tag-w">W</span>
+      {% for t in tracks if t.startswith('W') %}
+        <a href="/polytrack?track={{ t }}" class="track-pill {{ 'active' if active_track == t else '' }}">{{ t }}</a>
+      {% endfor %}
+      <span class="text-gray-700 mx-1">|</span>
+      <!-- Desert -->
+      <span class="group-label mr-1 tag-d">D</span>
+      {% for t in tracks if t.startswith('D') %}
+        <a href="/polytrack?track={{ t }}" class="track-pill {{ 'active' if active_track == t else '' }}">{{ t }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div>
+    <div class="flex items-baseline gap-3 mb-4">
+      <h2 class="text-lg font-bold tracking-tight">
+        {% if mode == 'overall' %}
+          Overall Rankings
+        {% else %}
+          Track <span class="accent-text">{{ active_track }}</span>
+        {% endif %}
+      </h2>
+      {% if mode == 'overall' %}
+        <span class="mono text-xs text-gray-600">sorted by total time · all tracks</span>
+      {% endif %}
+    </div>
+
+    {% if leaderboard %}
+
+      <!-- Header row -->
+      {% if mode == 'overall' %}
+      <div class="lb-row overall-cols header">
+        <span class="mono text-xs text-gray-600">#</span>
+        <span class="mono text-xs text-gray-600">PLAYER</span>
+        <span class="mono text-xs text-gray-600 text-center">TRACKS</span>
+        <span class="mono text-xs text-gray-600 text-right">TOTAL TIME</span>
+      </div>
+      {% else %}
+      <div class="lb-row track-cols header">
+        <span class="mono text-xs text-gray-600">#</span>
+        <span class="mono text-xs text-gray-600">PLAYER</span>
+        <span class="mono text-xs text-gray-600 text-right">TIME</span>
+      </div>
+      {% endif %}
+
+      <!-- Data rows -->
+      {% for entry in leaderboard %}
+        {% if mode == 'overall' %}
+        <div class="lb-row overall-cols data-row" style="animation-delay: {{ loop.index0 * 0.04 }}s">
+          <span class="rank-badge {{ 'gold' if entry.rank == 1 else 'silver' if entry.rank == 2 else 'bronze' if entry.rank == 3 else '' }}">
+            {{ entry.rank }}
+          </span>
+          <span class="player-name">{{ entry.nickname }}</span>
+          <span class="completed-cell">{{ entry.completed }}/{{ entry.total_tracks }}</span>
+          <span class="time-cell {{ 'gold' if entry.rank == 1 else '' }}">{{ entry.total_time }}</span>
+        </div>
+        {% else %}
+        <div class="lb-row track-cols data-row" style="animation-delay: {{ loop.index0 * 0.04 }}s">
+          <span class="rank-badge {{ 'gold' if entry.rank == 1 else 'silver' if entry.rank == 2 else 'bronze' if entry.rank == 3 else '' }}">
+            {{ entry.rank }}
+          </span>
+          <span class="player-name">{{ entry.nickname }}</span>
+          <span class="time-cell {{ 'gold' if entry.rank == 1 else '' }}">{{ entry.time }}</span>
+        </div>
+        {% endif %}
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state border border-dashed border-gray-800 rounded">
+        <p class="mb-1">No times yet for this track.</p>
+        <p class="text-xs">Register players below to get started.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Register panel -->
+  <div class="register-panel p-5 space-y-4">
+    <div>
+      <h3 class="font-bold text-sm tracking-wide mb-0.5">Add a player</h3>
+      <p class="text-xs text-gray-500">Students need to submit their Polytrack token hash. Find it in your Polytrack profile settings.</p>
+    </div>
+    <form method="POST" action="/polytrack/register" class="flex flex-col sm:flex-row gap-3">
+      <input class="reg-input" type="text" name="nickname" placeholder="Display name" required maxlength="32" />
+      <input class="reg-input mono text-xs" type="text" name="token_hash" placeholder="Token hash (64 chars)" required minlength="60" />
+      <button class="btn-accent whitespace-nowrap" type="submit">Add player</button>
+    </form>
+  </div>
+
+  <p class="text-xs text-gray-700 text-center mono">
+    times fetched live from polytrack api · refresh to update
+  </p>
+
+</div>
+</body>
+</html>
