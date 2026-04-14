@@ -1,19 +1,44 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 import requests
 import psycopg2
 import psycopg2.extras
 import os
+import random
+import smtplib
+from datetime import datetime, timedelta
+from email.message import EmailMessage
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from psycopg2 import pool
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET')
 
 load_dotenv()
 DATABASE_URL = os.environ['DATABASE_URL']
 
 # Connection pool for better serverless performance
 db_pool = pool.SimpleConnectionPool(1, 5, DATABASE_URL, sslmode='require', cursor_factory=psycopg2.extras.RealDictCursor)
+
+# In-memory sign-in codes; reset on server restart.
+SIGNIN_CODES = {}
+AUTHORIZED_EDITORS = ['max.fletcher@kcl.ac.uk', 'arka.goswami@kcl.ac.uk', 'victor.oluwafemi@kcl.ac.uk', 'kavan.vyas@kcl.ac.uk']
+NOTICES = [
+    {'title': 'Welcome to K-Engage', 'message': 'Check the games and homework cards every day.', 'author': 'System', 'created_at': 'Today'},
+]
+FORUM_POSTS = [
+    {'author': 'student@kcl.ac.uk', 'subject': 'Polytrack setup', 'message': 'Does anyone know how to add a player?', 'created_at': 'Today'},
+]
+HOMEWORK_CALENDAR = [
+    {'subject': 'Core', 'due': 'Every Monday', 'class': '12MOO'},
+    {'subject': 'Stats', 'due': 'Every Tuesday', 'class': '12MAO'},
+    {'subject': 'Mech', 'due': 'Every Wednesday', 'class': '12MEO'},
+    {'subject': 'Physics Johnson', 'due': 'Every Thursday', 'class': '12PHYJ'},
+    {'subject': 'Physics Rubin', 'due': 'Every Friday', 'class': '12PHYR'},
+    {'subject': 'CS Programming', 'due': 'Every Monday', 'class': '12CSP'},
+    {'subject': 'CS Theory', 'due': 'Every Wednesday', 'class': '12CST'},
+    {'subject': 'Econ', 'due': 'Every Thursday', 'class': '12ECO'},
+]
 
 TRACKS = [
     ('5803f9e963625804e3de3246d043dc7dde847aa32e991f7f7326b0453f1fa038', 'S1'),
@@ -68,6 +93,38 @@ def init_db():
         conn.commit()
     finally:
         release_db(conn)
+
+def generate_code():
+    return f"{random.randint(0, 999999):06d}"
+
+
+def send_sign_in_code(email, code):
+    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+
+    message = EmailMessage()
+    message['Subject'] = 'Your K-Engage sign-in code'
+    message['From'] = smtp_user
+    message['To'] = email
+    message.set_content(f'Your K-Engage sign-in code is: {code}\nIt expires in 10 minutes.')
+
+    if smtp_host and smtp_user and smtp_password:
+        try:
+            with smtplib.SMTP(smtp_host, smtp_port) as smtp_conn:
+                smtp_conn.starttls()
+                smtp_conn.login(smtp_user, smtp_password)
+                smtp_conn.send_message(message)
+        except Exception:
+            print(f'[AUTH] Could not send email to {email}. Code: {code}')
+    else:
+        print(f'[AUTH] Sign-in code for {email}: {code}')
+
+
+def can_edit_notices():
+    return session.get('user_email') in AUTHORIZED_EDITORS
+
 
 def refresh_due_player_times():
     conn = get_db()
@@ -208,6 +265,104 @@ def fetch_overall_leaderboard():
     for i, r in enumerate(results):
         r['rank'] = i + 1
     return results
+
+@app.before_request
+def require_login():
+    public_endpoints = {'sign_in', 'send_code', 'verify_code', 'static'}
+    if request.endpoint not in public_endpoints and 'user_email' not in session:
+        return redirect(url_for('sign_in'))
+
+@app.route('/', methods=['GET'])
+def sign_in():
+    if 'user_email' in session:
+        return redirect(url_for('home'))
+    return render_template('sign_in.html', email='', success=None, error=None, show_code_field=False)
+
+@app.route('/send-code', methods=['POST'])
+def send_code():
+    email = request.form.get('email', '').strip().lower()
+    if not email.endswith('@kcl.ac.uk'):
+        return render_template('sign_in.html', email=email, error='Email must end with @kcl.ac.uk.', success=None, show_code_field=False)
+
+    code = generate_code()
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    SIGNIN_CODES[email] = {
+        'code': code,
+        'expires_at': expires_at,
+        'used': False,
+    }
+
+    send_sign_in_code(email, code)
+    return render_template('sign_in.html', email=email, success='Code sent. Check your KCL email.', error=None, show_code_field=True)
+
+@app.route('/verify-code', methods=['POST'])
+def verify_code():
+    email = request.form.get('email', '').strip().lower()
+    code = request.form.get('code', '').strip()
+    if not email.endswith('@kcl.ac.uk') or len(code) != 6:
+        return render_template('sign_in.html', email=email, error='Invalid email or code.', success=None, show_code_field=True)
+
+    auth_row = SIGNIN_CODES.get(email)
+    if not auth_row or auth_row['code'] != code:
+        return render_template('sign_in.html', email=email, error='Code not found.', success=None, show_code_field=True)
+    if auth_row['used']:
+        return render_template('sign_in.html', email=email, error='Code has already been used.', success=None, show_code_field=True)
+    if auth_row['expires_at'] < datetime.utcnow():
+        return render_template('sign_in.html', email=email, error='Code has expired.', success=None, show_code_field=True)
+
+    auth_row['used'] = True
+    session['user_email'] = email
+    return redirect(url_for('home'))
+
+@app.route('/home')
+def home():
+    init_db()
+    refresh_due_player_times()
+    leaderboard = fetch_overall_leaderboard()
+    return render_template(
+        'home.html',
+        user_email=session.get('user_email'),
+        leaderboard=leaderboard[:5],
+        notices=NOTICES,
+        forum_posts=FORUM_POSTS,
+        can_edit=can_edit_notices(),
+        homework_calendar=HOMEWORK_CALENDAR,
+    )
+
+@app.route('/home/add-notice', methods=['POST'])
+def add_notice():
+    if not can_edit_notices():
+        return redirect(url_for('home'))
+    title = request.form.get('title', '').strip()
+    message = request.form.get('message', '').strip()
+    if title and message:
+        NOTICES.insert(0, {
+            'title': title,
+            'message': message,
+            'author': session.get('user_email'),
+            'created_at': datetime.utcnow().strftime('%b %d %Y %H:%M'),
+        })
+    return redirect(url_for('home'))
+
+@app.route('/home/add-forum', methods=['POST'])
+def add_forum():
+    if not can_edit_notices():
+        return redirect(url_for('home'))
+    subject = request.form.get('subject', '').strip()
+    message = request.form.get('message', '').strip()
+    if subject and message:
+        FORUM_POSTS.insert(0, {
+            'subject': subject,
+            'message': message,
+            'author': session.get('user_email'),
+            'created_at': datetime.utcnow().strftime('%b %d %Y %H:%M'),
+        })
+    return redirect(url_for('home'))
+
+@app.route('/logout')
+def logout():
+    session.pop('user_email', None)
+    return redirect(url_for('sign_in'))
 
 @app.route('/polytrack')
 def polytrack_index():

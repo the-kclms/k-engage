@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home — K-Engage</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="header-bar px-6 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-xl font-extrabold tracking-tight">K<span class="accent-text">ENGAGE</span></span>
+      <span class="text-xs text-gray-600 mono tracking-widest uppercase mt-0.5">KCLMS student portal</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="mono text-xs text-gray-600">signed in as {{ user_email }}</span>
+      <button id="theme-toggle" class="btn-help" title="Toggle theme">🌙</button>
+      <a href="/logout" class="btn-help">Logout</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="register-panel p-5 space-y-4">
+        <h3 class="font-bold text-sm tracking-wide">Games</h3>
+        <p class="signin-note">School games are a fun extra. Here’s the LinkedIn games leaderboard plus our popular Polytrack game summary.</p>
+        <div class="space-y-4">
+          <div class="iframe-wrapper">
+            <iframe src="/static/linkedin-game-leaderboard.html" title="LinkedIn Games Leaderboard"></iframe>
+          </div>
+          <div class="embed-card">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-semibold">Polytrack class game</span>
+              <a href="/polytrack" class="btn-help">View full leaderboard</a>
+            </div>
+            <div class="lb-row overall-cols header">
+              <span class="mono text-xs text-gray-600">#</span>
+              <span class="mono text-xs text-gray-600">PLAYER</span>
+              <span class="mono text-xs text-gray-600 text-center">TRACKS</span>
+              <span class="mono text-xs text-gray-600 text-right">TOTAL</span>
+            </div>
+            {% for entry in leaderboard %}
+            <div class="lb-row overall-cols data-row">
+              <span class="rank-badge {{ 'gold' if entry.rank == 1 else 'silver' if entry.rank == 2 else 'bronze' if entry.rank == 3 else '' }}">
+                {{ entry.rank }}
+              </span>
+              <span class="player-name">{{ entry.nickname }}</span>
+              <span class="completed-cell">{{ entry.completed }}/{{ entry.total_tracks }}</span>
+              <span class="time-cell {{ 'gold' if entry.rank == 1 else '' }}">{{ entry.total_time }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="register-panel p-5 space-y-4">
+        <h3 class="font-bold text-sm tracking-wide">Notices</h3>
+        <div class="space-y-3">
+          {% for notice in notices %}
+          <div class="border border-gray-700 rounded p-3">
+            <div class="flex items-center justify-between gap-3">
+              <span class="font-semibold">{{ notice.title }}</span>
+              <span class="mono text-xs text-gray-500">{{ notice.created_at }}</span>
+            </div>
+            <p class="text-sm text-gray-300 mt-2">{{ notice.message }}</p>
+            <p class="mono text-xs text-gray-500 mt-2">{{ notice.author }}</p>
+          </div>
+          {% endfor %}
+          {% if can_edit %}
+          <form method="POST" action="/home/add-notice" class="space-y-3">
+            <input class="reg-input" type="text" name="title" placeholder="Notice title" required />
+            <textarea class="reg-input" name="message" placeholder="Notice message" rows="3" required></textarea>
+            <button class="btn-accent signin-cta" type="submit">Post notice</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="register-panel p-5 space-y-4">
+        <h3 class="font-bold text-sm tracking-wide">Homework Calendar</h3>
+        <div class="space-y-3">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead>
+                <tr class="border-b border-gray-800">
+                  <th class="py-2 text-xs uppercase text-gray-500">Class</th>
+                  <th class="py-2 text-xs uppercase text-gray-500">Subject</th>
+                  <th class="py-2 text-xs uppercase text-gray-500">Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in homework_calendar %}
+                <tr class="border-b border-gray-800">
+                  <td class="py-2">{{ item.class }}</td>
+                  <td class="py-2">{{ item.subject }}</td>
+                  <td class="py-2">{{ item.due }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6">
+      <div class="register-panel p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm tracking-wide">Forums</h3>
+          {% if can_edit %}
+          <span class="text-xs text-gray-400">You can post</span>
+          {% endif %}
+        </div>
+        <div class="space-y-4">
+          {% for post in forum_posts %}
+          <div class="border border-gray-700 rounded p-3">
+            <div class="flex items-center justify-between gap-3">
+              <span class="font-semibold">{{ post.subject }}</span>
+              <span class="mono text-xs text-gray-500">{{ post.created_at }}</span>
+            </div>
+            <p class="text-sm text-gray-300 mt-2">{{ post.message }}</p>
+            <p class="mono text-xs text-gray-500 mt-2">{{ post.author }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% if can_edit %}
+        <form method="POST" action="/home/add-forum" class="space-y-3">
+          <input class="reg-input" type="text" name="subject" placeholder="Subject" required />
+          <textarea class="reg-input" name="message" placeholder="Post message" rows="3" required></textarea>
+          <button class="btn-accent signin-cta" type="submit">Publish post</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      html.classList.add('light-mode');
+      themeToggle.textContent = '☀️';
+    }
+    themeToggle.addEventListener('click', () => {
+      html.classList.toggle('light-mode');
+      const isLight = html.classList.contains('light-mode');
+      themeToggle.textContent = isLight ? '☀️' : '🌙';
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>

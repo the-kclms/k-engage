@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Games Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 520px;
+    }
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .item:last-child { border-bottom: none; }
+    .name {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .score {
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="title">LinkedIn Games Leaderboard</div>
+      <div class="item"><span class="name">KCLMS Champs</span><span class="score">1,280</span></div>
+      <div class="item"><span class="name">Data Wizards</span><span class="score">1,210</span></div>
+      <div class="item"><span class="name">Physics Heads</span><span class="score">1,170</span></div>
+      <div class="item"><span class="name">Code Crushers</span><span class="score">1,120</span></div>
+      <div class="item"><span class="name">Econ Eagles</span><span class="score">1,090</span></div>
+    </div>
+  </div>
+</body>
+</html>

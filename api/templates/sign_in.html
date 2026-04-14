@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — K-Engage</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="header-bar px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-xl font-extrabold tracking-tight">K<span class="accent-text">ENGAGE</span></span>
+      <span class="text-xs text-gray-600 mono tracking-widest uppercase mt-0.5">KCLMS student portal</span>
+    </div>
+    <span class="mono text-xs text-gray-600">sign in with your @kcl.ac.uk email</span>
+  </div>
+
+  <div class="max-w-3xl mx-auto px-4 py-12">
+    <div class="signin-panel p-5 space-y-4">
+      <div>
+        <h3 class="font-bold text-sm tracking-wide mb-0.5">Sign in</h3>
+        <p class="signin-note">Enter your KCL email, get a 6-digit access code, and continue.</p>
+      </div>
+
+      {% if error %}
+      <div class="alert error">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+      <div class="alert success">{{ success }}</div>
+      {% endif %}
+
+      <form method="POST" action="/send-code" class="signin-form">
+        <label class="text-xs uppercase tracking-widest text-gray-500">Email</label>
+        <input class="reg-input" type="email" name="email" placeholder="you@kcl.ac.uk" required value="{{ email or '' }}" />
+        <button class="btn-accent signin-cta" type="submit">Send my code</button>
+      </form>
+
+      {% if show_code_field %}
+      <form method="POST" action="/verify-code" class="signin-form">
+        <input type="hidden" name="email" value="{{ email }}" />
+        <label class="text-xs uppercase tracking-widest text-gray-500">Verification code</label>
+        <input class="reg-input mono text-xs" type="text" name="code" placeholder="123456" maxlength="6" minlength="6" required />
+        <button class="btn-accent signin-cta" type="submit">Verify code</button>
+      </form>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      html.classList.add('light-mode');
+      if (themeToggle) themeToggle.textContent = '☀️';
+    }
+  </script>
+</body>
+</html>
