@@ -47,11 +47,71 @@ def init_db():
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute('''CREATE TABLE IF NOT EXISTS players (
-                id SERIAL PRIMARY KEY,
-                nickname TEXT NOT NULL,
-                token_hash TEXT NOT NULL UNIQUE
-            )''')
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS players (
+                    id SERIAL PRIMARY KEY,
+                    nickname TEXT NOT NULL,
+                    token_hash TEXT NOT NULL UNIQUE,
+                    last_updated TIMESTAMP WITH TIME ZONE
+                )
+            ''')
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS player_times (
+                    id SERIAL PRIMARY KEY,
+                    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                    track_name TEXT NOT NULL,
+                    frames INTEGER,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    UNIQUE(player_id, track_name)
+                )
+            ''')
+        conn.commit()
+    finally:
+        release_db(conn)
+
+def refresh_due_player_times():
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM players WHERE last_updated IS NULL OR last_updated < NOW() - INTERVAL '1 day'"
+            )
+            due_players = cur.fetchall()
+    finally:
+        release_db(conn)
+
+    for player in due_players:
+        update_player_times(player)
+
+
+def update_player_times(player):
+    track_results = {}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        futures = {ex.submit(fetch_time, player['token_hash'], track_id): track_name for track_id, track_name in TRACKS}
+        for future in as_completed(futures):
+            track_name = futures[future]
+            frames = future.result()
+            if frames is not None:
+                track_results[track_name] = frames
+
+    if not track_results:
+        return
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            for track_name, frames in track_results.items():
+                cur.execute(
+                    '''
+                    INSERT INTO player_times (player_id, track_name, frames)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (player_id, track_name) DO UPDATE
+                    SET frames = EXCLUDED.frames,
+                        updated_at = NOW()
+                    ''',
+                    (player['id'], track_name, frames)
+                )
+            cur.execute('UPDATE players SET last_updated = NOW() WHERE id = %s', (player['id'],))
         conn.commit()
     finally:
         release_db(conn)
@@ -80,29 +140,28 @@ def fetch_time(token_hash, track_id):
     return None
 
 def fetch_track_leaderboard(track_name):
-    track_id = TRACK_IDS[track_name]
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM players')
-            players = cur.fetchall()
+            cur.execute('''
+                SELECT p.nickname, pt.frames
+                FROM players p
+                JOIN player_times pt ON p.id = pt.player_id
+                WHERE pt.track_name = %s AND pt.frames IS NOT NULL
+                ORDER BY pt.frames
+            ''', (track_name,))
+            rows = cur.fetchall()
     finally:
         release_db(conn)
 
     results = []
-    with ThreadPoolExecutor(max_workers=5) as ex:
-        futures = {ex.submit(fetch_time, p['token_hash'], track_id): p for p in players}
-        for future in as_completed(futures):
-            player = futures[future]
-            frames = future.result()
-            if frames:
-                results.append({
-                    'nickname': player['nickname'],
-                    'frames': frames,
-                    'time': frames_to_time(frames),
-                })
+    for row in rows:
+        results.append({
+            'nickname': row['nickname'],
+            'frames': row['frames'],
+            'time': frames_to_time(row['frames']),
+        })
 
-    results.sort(key=lambda x: x['frames'])
     for i, r in enumerate(results):
         r['rank'] = i + 1
     return results
@@ -111,26 +170,26 @@ def fetch_overall_leaderboard():
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM players')
-            players = cur.fetchall()
+            cur.execute('''
+                SELECT p.id, p.nickname, pt.track_name, pt.frames
+                FROM players p
+                LEFT JOIN player_times pt ON p.id = pt.player_id
+                ORDER BY p.id
+            ''')
+            rows = cur.fetchall()
     finally:
         release_db(conn)
 
-    player_times = {p['id']: {'nickname': p['nickname'], 'token_hash': p['token_hash'], 'times': {}} for p in players}
-
-    tasks = []
-    with ThreadPoolExecutor(max_workers=5) as ex:
-        for p in players:
-            for track_id, track_name in TRACKS:
-                future = ex.submit(fetch_time, p['token_hash'], track_id)
-                tasks.append((future, p['id'], track_name))
-        for future, pid, track_name in tasks:
-            frames = future.result()
-            if frames:
-                player_times[pid]['times'][track_name] = frames
+    player_data = {}
+    for row in rows:
+        pid = row['id']
+        if pid not in player_data:
+            player_data[pid] = {'nickname': row['nickname'], 'times': {}}
+        if row['track_name'] and row['frames']:
+            player_data[pid]['times'][row['track_name']] = row['frames']
 
     results = []
-    for pid, data in player_times.items():
+    for pid, data in player_data.items():
         times = data['times']
         if not times:
             continue
@@ -152,7 +211,9 @@ def fetch_overall_leaderboard():
 
 @app.route('/polytrack')
 def polytrack_index():
-    init_db()  # Ensure table exists
+    init_db()
+    refresh_due_player_times()
+
     track = request.args.get('track')
     conn = get_db()
     try:
@@ -181,7 +242,6 @@ def polytrack_index():
 
 @app.route('/polytrack/register', methods=['POST'])
 def register():
-    init_db()  # Ensure table exists
     nickname = request.form.get('nickname', '').strip()
     token_hash = request.form.get('token_hash', '').strip()
     if not nickname or not token_hash:
@@ -194,9 +254,13 @@ def register():
                     'INSERT INTO players (nickname, token_hash) VALUES (%s, %s) ON CONFLICT (token_hash) DO NOTHING',
                     (nickname, token_hash)
                 )
-            conn.commit()
+                conn.commit()
+                cur.execute('SELECT id, nickname, token_hash FROM players WHERE token_hash = %s', (token_hash,))
+                player = cur.fetchone()
         finally:
             release_db(conn)
+        if player:
+            update_player_times(player)
     except Exception:
         pass
     return redirect(url_for('polytrack_index'))
@@ -213,5 +277,4 @@ def delete_player(player_id):
     return redirect(url_for('polytrack_index'))
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)

@@ -407,7 +407,7 @@
   </div>
 
   <p class="text-xs text-gray-700 text-center mono">
-    times fetched live from polytrack api · refresh to update
+    times cached in database · refresh to update
   </p>
 
 </div>
@@ -421,7 +421,7 @@
     </div>
     <div class="modal-body">
       <video controls width="100%">
-        <source src="/assets/token-hash-tutorial.mp4" type="video/mp4">
+        <source src="/assets/video.mp4" type="video/mp4">
         Your browser does not support the video tag.
       </video>
     </div>
@@ -435,18 +435,14 @@
   function hideModal() {
     document.getElementById('helpModal').classList.remove('show');
   }
-  // Close modal when clicking outside
   document.getElementById('helpModal').addEventListener('click', function(e) {
     if (e.target === this) {
       hideModal();
     }
   });
 
-  // Theme toggle
   const themeToggle = document.getElementById('theme-toggle');
   const html = document.documentElement;
-
-  // Load saved theme
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme === 'light') {
     html.classList.add('light-mode');
