@@ -1,11 +1,15 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for
 import requests
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dotenv import load_dotenv
 
 app = Flask(__name__)
-DB = 'leaderboard.db'
+
+load_dotenv()
+DATABASE_URL = os.environ['DATABASE_URL']
 
 TRACKS = [
     ('5803f9e963625804e3de3246d043dc7dde847aa32e991f7f7326b0453f1fa038', 'S1'),
@@ -30,21 +34,20 @@ TRACK_IDS = {name: tid for tid, name in TRACKS}
 TRACK_NAMES = [name for _, name in TRACKS]
 
 def get_db():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 def init_db():
     with get_db() as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS players (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nickname TEXT NOT NULL,
-            token_hash TEXT NOT NULL UNIQUE
-        )''')
+        with conn.cursor() as cur:
+            cur.execute('''CREATE TABLE IF NOT EXISTS players (
+                id SERIAL PRIMARY KEY,
+                nickname TEXT NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE
+            )''')
         conn.commit()
 
 def frames_to_time(frames):
-    """Convert frames (ms) to M:SS.mmm"""
     total_ms = frames
     minutes = total_ms // 60000
     seconds = (total_ms % 60000) // 1000
@@ -52,7 +55,6 @@ def frames_to_time(frames):
     return f"{minutes}:{seconds:02d}.{ms:03d}"
 
 def fetch_time(token_hash, track_id):
-    """Fetch a player's time for a track. Returns frames or None."""
     try:
         url = (
             f"https://vps.kodub.com/v6/leaderboard"
@@ -69,10 +71,11 @@ def fetch_time(token_hash, track_id):
     return None
 
 def fetch_track_leaderboard(track_name):
-    """Fetch all players' times for a given track, sorted."""
     track_id = TRACK_IDS[track_name]
     with get_db() as conn:
-        players = conn.execute('SELECT * FROM players').fetchall()
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM players')
+            players = cur.fetchall()
 
     results = []
     with ThreadPoolExecutor(max_workers=10) as ex:
@@ -93,11 +96,11 @@ def fetch_track_leaderboard(track_name):
     return results
 
 def fetch_overall_leaderboard():
-    """Overall leaderboard: sum of all track times per player. Only count players with times on all tracks."""
     with get_db() as conn:
-        players = conn.execute('SELECT * FROM players').fetchall()
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM players')
+            players = cur.fetchall()
 
-    # Fetch all times in parallel
     player_times = {p['id']: {'nickname': p['nickname'], 'token_hash': p['token_hash'], 'times': {}} for p in players}
 
     tasks = []
@@ -136,7 +139,9 @@ def fetch_overall_leaderboard():
 def polytrack_index():
     track = request.args.get('track')
     with get_db() as conn:
-        players = conn.execute('SELECT * FROM players').fetchall()
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM players')
+            players = cur.fetchall()
 
     if track and track in TRACK_IDS:
         leaderboard = fetch_track_leaderboard(track)
@@ -163,7 +168,11 @@ def register():
         return redirect(url_for('polytrack_index'))
     try:
         with get_db() as conn:
-            conn.execute('INSERT OR IGNORE INTO players (nickname, token_hash) VALUES (?, ?)', (nickname, token_hash))
+            with conn.cursor() as cur:
+                cur.execute(
+                    'INSERT INTO players (nickname, token_hash) VALUES (%s, %s) ON CONFLICT (token_hash) DO NOTHING',
+                    (nickname, token_hash)
+                )
             conn.commit()
     except Exception:
         pass
@@ -172,7 +181,8 @@ def register():
 @app.route('/polytrack/delete/<int:player_id>', methods=['POST'])
 def delete_player(player_id):
     with get_db() as conn:
-        conn.execute('DELETE FROM players WHERE id = ?', (player_id,))
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM players WHERE id = %s', (player_id,))
         conn.commit()
     return redirect(url_for('polytrack_index'))
 
