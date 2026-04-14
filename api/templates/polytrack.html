@@ -371,13 +371,11 @@
       <h3 class="font-bold text-sm tracking-wide mb-0.5">Add a player</h3>
       <p class="text-xs text-gray-500">Students need to submit their Polytrack token hash. Find it in your Polytrack profile settings.</p>
     </div>
-    <form method="POST" action="/polytrack/register" class="flex flex-col sm:flex-row gap-3">
+    <form method="POST" action="/polytrack/register" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <input class="reg-input" type="text" name="nickname" placeholder="Name" required maxlength="32" />
-      <div class="flex gap-2 flex-1">
-        <input class="reg-input mono text-xs flex-1" type="text" name="token_hash" placeholder="Token hash (64 chars)" required minlength="60" />
-        <button type="button" class="btn-help whitespace-nowrap" onclick="showModal()">Not sure how to find this?</button>
-      </div>
-      <button class="btn-accent whitespace-nowrap" type="submit">Add player</button>
+      <input class="reg-input mono text-xs" type="text" name="token_hash" placeholder="Token hash (64 chars)" required minlength="60" />
+      <button type="button" class="btn-help" onclick="showModal()">Not sure how to find this?</button>
+      <button class="btn-accent col-span-1 sm:col-span-3" type="submit">Add player</button>
     </form>
   </div>
 
