@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from psycopg2 import pool
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET')
+app.secret_key = os.environ.get('SECRET_KEY', 'didheblud')
 
 load_dotenv()
 DATABASE_URL = os.environ['DATABASE_URL']
