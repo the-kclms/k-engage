@@ -4,9 +4,7 @@ import psycopg2
 import psycopg2.extras
 import os
 import random
-import smtplib
 from datetime import datetime, timedelta
-from email.message import EmailMessage
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from psycopg2 import pool
@@ -152,27 +150,27 @@ def generate_code():
 
 
 def send_sign_in_code(email, code):
-    smtp_host = os.environ.get('SMTP_HOST')
-    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
-    smtp_user = os.environ.get('SMTP_USER')
-    smtp_password = os.environ.get('SMTP_PASSWORD')
-
-    message = EmailMessage()
-    message['Subject'] = 'Your K-Engage sign-in code'
-    message['From'] = smtp_user
-    message['To'] = email
-    message.set_content(f'Your K-Engage sign-in code is: {code}\nIt expires in 10 minutes.')
-
-    if smtp_host and smtp_user and smtp_password:
-        try:
-            with smtplib.SMTP(smtp_host, smtp_port) as smtp_conn:
-                smtp_conn.starttls()
-                smtp_conn.login(smtp_user, smtp_password)
-                smtp_conn.send_message(message)
-        except Exception:
-            print(f'[AUTH] Could not send email to {email}. Code: {code}')
-    else:
+    resend_key = os.environ.get('RESEND_KEY')
+    if not resend_key:
         print(f'[AUTH] Sign-in code for {email}: {code}')
+        return
+    
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={'Authorization': f'Bearer {resend_key}'},
+            json={
+                'from': 'K-Engage <noreply@kclms.app>',
+                'to': email,
+                'subject': 'Your K-Engage sign-in code',
+                'text': f'Your K-Engage sign-in code is: {code}\nIt expires in 10 minutes.',
+                'html': f'<p>Your K-Engage sign-in code is: <strong>{code}</strong></p><p>It expires in 10 minutes.</p>',
+            }
+        )
+        if response.status_code not in (200, 201):
+            print(f'[AUTH] Could not send email to {email}. Code: {code}')
+    except Exception as e:
+        print(f'[AUTH] Email error for {email}: {e}. Code: {code}')
 
 
 def can_edit_notices():
