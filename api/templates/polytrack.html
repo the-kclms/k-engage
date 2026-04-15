@@ -27,26 +27,40 @@
 
   <!-- Track selector -->
   <div class="space-y-4">
-    <div class="flex flex-wrap gap-1.5 items-center">
+    <div class="flex flex-wrap gap-3 items-center">
       <a href="/polytrack" class="track-pill overall {{ 'active' if mode == 'overall' else '' }}">OVERALL</a>
-      <span class="text-gray-700 mx-1">|</span>
-      <!-- Spring -->
-      <span class="group-label mr-1 tag-s">S</span>
-      {% for t in tracks if t.startswith('S') %}
-        <a href="/polytrack?track={{ t }}" class="track-pill {{ 'active' if active_track == t else '' }}">{{ t }}</a>
-      {% endfor %}
-      <span class="text-gray-700 mx-1">|</span>
-      <!-- Winter -->
-      <span class="group-label mr-1 tag-w">W</span>
-      {% for t in tracks if t.startswith('W') %}
-        <a href="/polytrack?track={{ t }}" class="track-pill {{ 'active' if active_track == t else '' }}">{{ t }}</a>
-      {% endfor %}
-      <span class="text-gray-700 mx-1">|</span>
-      <!-- Desert -->
-      <span class="group-label mr-1 tag-d">D</span>
-      {% for t in tracks if t.startswith('D') %}
-        <a href="/polytrack?track={{ t }}" class="track-pill {{ 'active' if active_track == t else '' }}">{{ t }}</a>
-      {% endfor %}
+      
+      <!-- Official Tracks Dropdown -->
+      <select id="officialSelect" class="track-dropdown" onchange="if (this.value) window.location.href = '/polytrack?track=' + this.value">
+        <option value="">Official Tracks ▼</option>
+        <optgroup label="Spring">
+          {% for t in tracks if t[1]|length == 2 and t[1].startswith('S') %}
+            <option value="{{ t[1] }}" {{ 'selected' if active_track == t[1] else '' }}>{{ t[1] }}</option>
+          {% endfor %}
+        </optgroup>
+        <optgroup label="Winter">
+          {% for t in tracks if t[1]|length == 2 and t[1].startswith('W') %}
+            <option value="{{ t[1] }}" {{ 'selected' if active_track == t[1] else '' }}>{{ t[1] }}</option>
+          {% endfor %}
+        </optgroup>
+        <optgroup label="Desert">
+          {% for t in tracks if t[1]|length == 2 and t[1].startswith('D') %}
+            <option value="{{ t[1] }}" {{ 'selected' if active_track == t[1] else '' }}>{{ t[1] }}</option>
+          {% endfor %}
+        </optgroup>
+      </select>
+      
+      <!-- Community Tracks Dropdown -->
+      <select id="communitySelect" class="track-dropdown" onchange="if (this.value) window.location.href = '/polytrack?track=' + this.value">
+        <option value="">Community Tracks ▼</option>
+        {% if tracks %}
+          {% for t in tracks if t[1]|length > 2 %}
+            <option value="{{ t[1] }}" {{ 'selected' if active_track == t[1] else '' }}>{{ t[1] }}</option>
+          {% endfor %}
+        {% else %}
+          <option disabled>No community tracks yet</option>
+        {% endif %}
+      </select>
     </div>
   </div>
 

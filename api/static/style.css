@@ -71,6 +71,34 @@ body::before {
   border-color: var(--text);
   color: #000;
 }
+.track-dropdown {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+.track-dropdown:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.track-dropdown:focus {
+  outline: none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.track-dropdown option {
+  background: var(--surface);
+  color: var(--text);
+}
+.track-dropdown optgroup {
+  color: var(--muted);
+}
 .group-label {
   font-size: 10px;
   letter-spacing: 0.15em;
