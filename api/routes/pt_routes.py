@@ -1,15 +1,5 @@
-from flask import Flask, Blueprint, render_template, request, redirect, url_for, session
-import requests
-import psycopg2
-import psycopg2.extras
-import os
-import random
-from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dotenv import load_dotenv
-from psycopg2 import pool
+from flask import Blueprint
 
-from api.extensions.db import *
 from api.utils.polytrack_utils import *
 
 pt_blueprint = Blueprint('polytrack', __name__, url_prefix="/polytrack")

@@ -1,13 +1,3 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-import requests
-import psycopg2
-import psycopg2.extras
-import os
-import random
-from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dotenv import load_dotenv
-from psycopg2 import pool
 from api.extensions.db import *
 
 def refresh_due_player_times():
