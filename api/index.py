@@ -14,6 +14,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'didheblud')
 
 load_dotenv()
 DATABASE_URL = os.environ['DATABASE_URL']
+WEBHOOK_URL = os.environ['WEBHOOK_URL']
 
 # Connection pool for better serverless performance
 db_pool = pool.SimpleConnectionPool(1, 5, DATABASE_URL, sslmode='require', cursor_factory=psycopg2.extras.RealDictCursor)
@@ -151,12 +152,11 @@ def generate_code():
 
 def send_sign_in_code(email, code):
     try:
-        url = "https://eo9hhcmknwji8jn.m.pipedream.net"
         data = {
             "email": email,
             "code": code
         }
-        requests.post(url, json=data)
+        requests.post(WEBHOOK_URL, json=data)
         return
     except Exception as e:
         print(f'[AUTH] Email error for {email}: {e}. Code: {code}')
