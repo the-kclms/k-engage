@@ -10,7 +10,7 @@ auth_blueprint = Blueprint('auth', __name__)
 
 @auth_blueprint.before_request
 def require_login():
-    public_endpoints = {'auth.sign_in', 'auth.send_code', 'auth.verify_code', 'static'}
+    public_endpoints = {'auth.sign_in', 'auth.send_code', 'auth.verify_code', 'static', 'common.video'}
     if request.endpoint not in public_endpoints and 'user_email' not in session:
         return redirect(url_for('auth.sign_in'))
 

@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, send_file
 
 from api.utils.general_utils import *
 from api.utils.polytrack_utils import *
@@ -7,6 +7,14 @@ from api.utils.polytrack_utils import *
 
 # [1, auth_routes.py]
 home_blueprint = Blueprint('home', __name__, url_prefix="/home")
+
+@home_blueprint.route('/video.mp4')
+def video():
+    video_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'video.mp4')
+    if os.path.exists(video_path):
+        return send_file(video_path, mimetype='video/mp4')
+    return '', 404
+
 
 @home_blueprint.route('/')
 def home():
