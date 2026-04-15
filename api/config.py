@@ -9,6 +9,7 @@ load_dotenv()
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'didheblud')
 DATABASE_URL = os.environ['DATABASE_URL']
+WEBHOOK_URL = os.environ['WEBHOOK_URL']
 
 SIGNIN_CODES = {}
 AUTHORIZED_EDITORS = ['max.fletcher@kcl.ac.uk', 'arka.goswami@kcl.ac.uk', 'victor.oluwafemi@kcl.ac.uk', 'kavan.vyas@kcl.ac.uk']
