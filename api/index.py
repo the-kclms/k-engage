@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 import requests
 import psycopg2
 import psycopg2.extras
@@ -308,9 +308,16 @@ def fetch_overall_leaderboard():
 
 @app.before_request
 def require_login():
-    public_endpoints = {'sign_in', 'send_code', 'verify_code', 'static'}
+    public_endpoints = {'sign_in', 'send_code', 'verify_code', 'static', 'video'}
     if request.endpoint not in public_endpoints and 'user_email' not in session:
         return redirect(url_for('sign_in'))
+
+@app.route('/video.mp4')
+def video():
+    video_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'video.mp4')
+    if os.path.exists(video_path):
+        return send_file(video_path, mimetype='video/mp4')
+    return '', 404
 
 @app.route('/', methods=['GET'])
 def sign_in():
