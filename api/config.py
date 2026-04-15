@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 # In-memory sign-in codes; reset on server restart.
 
+# Load .env file [on .gitignore]
 load_dotenv()
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'didheblud')
@@ -28,6 +29,7 @@ HOMEWORK_CALENDAR = [
     {'subject': 'Econ', 'due': 'Every Thursday', 'class': '12ECO'},
 ]
 
+# Track to track name
 TRACKS = [
     ('5803f9e963625804e3de3246d043dc7dde847aa32e991f7f7326b0453f1fa038', 'S1'),
     ('7eac4fee1111152cfba4d3737410264ca0f22c7f5a2211e79f0099589b8b48c0', 'S2'),

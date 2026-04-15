@@ -2,6 +2,9 @@ from flask import Blueprint
 
 from api.utils.polytrack_utils import *
 
+# hold all polytrack related routes
+
+# [1, auth_routes.py]
 pt_blueprint = Blueprint('polytrack', __name__, url_prefix="/polytrack")
 
 @pt_blueprint.route('/')

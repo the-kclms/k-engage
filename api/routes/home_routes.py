@@ -3,6 +3,9 @@ from flask import Blueprint
 from api.utils.general_utils import *
 from api.utils.polytrack_utils import *
 
+# hold all routes stemming from /home/
+
+# [1, auth_routes.py]
 home_blueprint = Blueprint('home', __name__, url_prefix="/home")
 
 @home_blueprint.route('/')

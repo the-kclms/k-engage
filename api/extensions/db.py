@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 from psycopg2 import pool
 from api.config import *
 
+# NOTE: we keep all imports here as alot of programs actually do require the imports
+# stemmed from this file, it would be tedious to replace them
+
 db_pool = pool.SimpleConnectionPool(1, 5, DATABASE_URL, sslmode='require', cursor_factory=psycopg2.extras.RealDictCursor)
 
 def get_db():

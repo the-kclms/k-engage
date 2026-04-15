@@ -5,6 +5,7 @@ from flask import session
 
 from api.config import *
 
+# Hold general purpose utility functions for K-ENGAGE
 
 def generate_code():
     return f"{random.randint(0, 999999):06d}"

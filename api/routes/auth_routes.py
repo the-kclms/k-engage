@@ -3,6 +3,9 @@ from flask import Blueprint
 from api.extensions.db import *
 from api.utils.general_utils import *
 
+# hold authentication related routes
+
+# [1] We can use blueprints to modularly apply routes to flask.
 auth_blueprint = Blueprint('auth', __name__)
 
 @auth_blueprint.before_request

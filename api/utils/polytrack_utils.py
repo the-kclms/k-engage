@@ -1,5 +1,7 @@
 from api.extensions.db import *
 
+# Polytrack-specific utility functions
+
 def refresh_due_player_times():
     conn = get_db()
     try:
